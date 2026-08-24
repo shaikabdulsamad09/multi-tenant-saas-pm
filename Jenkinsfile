@@ -42,7 +42,7 @@ pipeline {
         stage('Verify deployment') {
             steps {
                 sh 'docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
-                sh 'curl -fsS http://localhost:${BACKEND_PORT}/api/health'
+                sh 'docker exec ${BACKEND_CONTAINER} node -e "require('\''http'\'').get('\''http://localhost:${BACKEND_PORT}/api/health'\'',r=>{process.exit(r.statusCode===200?0:1)}).on('\''error'\'',()=>process.exit(1))"'
                 sh 'curl -fsSI http://localhost:${FRONTEND_PORT}'
             }
         }
