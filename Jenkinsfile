@@ -1,58 +1,59 @@
 pipeline {
     agent any
 
+    environment {
+        COMPOSE_PROJECT_NAME = 'multi-tenant-saas-pm'
+        BACKEND_CONTAINER = 'saas-backend'
+        FRONTEND_CONTAINER = 'saas-frontend'
+        POSTGRES_CONTAINER = 'saas-postgres'
+        BACKEND_PORT = '5000'
+        FRONTEND_PORT = '3000'
+        DB_PORT = '5432'
+    }
+
     stages {
-
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                echo 'Cloning project from GitHub...'
+                echo 'Checking out project source from GitHub...'
+                checkout scm
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Prepare environment') {
             steps {
-                bat '''
-                docker build -t cloud-based-multi-tenant-saas-project-management-platform .
-                '''
+                sh 'docker --version'
+                sh 'docker compose version'
             }
         }
 
-        stage('Stop Existing Container') {
+        stage('Build Docker images') {
             steps {
-                bat '''
-                docker stop cloud-based-multi-tenant-saas || exit /b 0
-                docker rm cloud-based-multi-tenant-saas || exit /b 0
-                '''
+                sh 'docker compose build --no-cache'
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Deploy application') {
             steps {
-                bat '''
-                docker run -d ^
-                --name cloud-based-multi-tenant-saas ^
-                -p 3000:3000 ^
-                cloud-based-multi-tenant-saas-project-management-platform
-                '''
+                sh 'docker compose down --remove-orphans || true'
+                sh 'docker compose up -d --remove-orphans'
             }
         }
 
-        stage('Verify Container') {
+        stage('Verify deployment') {
             steps {
-                bat '''
-                docker ps
-                '''
+                sh 'docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
+                sh 'curl -fsS http://localhost:${BACKEND_PORT}/api/health'
+                sh 'curl -fsSI http://localhost:${FRONTEND_PORT}'
             }
         }
     }
 
     post {
         success {
-            echo 'Project built and deployed successfully!'
+            echo 'Multi-tenant SaaS platform deployed successfully via Docker Compose.'
         }
-
         failure {
-            echo 'Build or deployment failed.'
+            echo 'Pipeline failed. Check the console output and Docker logs.'
         }
     }
 }
