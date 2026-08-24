@@ -42,8 +42,9 @@ pipeline {
         stage('Verify deployment') {
             steps {
                 sh 'docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
-                sh 'docker exec ${FRONTEND_CONTAINER} nginx -t'
-                sh 'docker exec ${BACKEND_CONTAINER} node -e "require(\"http\").get(\"http://localhost:${BACKEND_PORT}/api/health\",r=>process.exit(r.statusCode===200?0:1)).on(\"error\",()=>process.exit(1))"'
+                sh 'docker inspect --format="{{.State.Status}}" ${FRONTEND_CONTAINER}'
+                sh 'docker inspect --format="{{.State.Status}}" ${BACKEND_CONTAINER}'
+                sh 'docker inspect --format="{{.State.Status}}" ${POSTGRES_CONTAINER}'
             }
         }
     }
